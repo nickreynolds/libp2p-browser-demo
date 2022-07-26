@@ -3,8 +3,13 @@
 import setupLibp2p from './libp2p.js'
 import { createFromJSON } from '@libp2p/peer-id-factory'
 import peerIdListenerJson from './peer-id-listener.js'
+import { pipe } from 'it-pipe'
+// import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
+import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
+import * as lp from 'it-length-prefixed'
+import map from 'it-map'
 
-export async function createListener () {
+export async function createListener (streamReceivedCb, streamEndedCb) {
   // Create a new libp2p node with the given multi-address
   const idListener = await createFromJSON(peerIdListenerJson)
   const nodeListener = await setupLibp2p(idListener)
@@ -22,6 +27,24 @@ export async function createListener () {
     // // Read the stream and output to console
     // streamToConsole(stream)
     console.log("handle stream: ", stream)
+
+
+    pipe(
+      // Read from the stream (the source)
+      stream.source,
+      // Decode length-prefixed data
+      lp.decode(),
+      // Turn buffers into strings
+      (source) => map(source, (buf) => uint8ArrayToString(buf)),
+      // Sink function
+      async function (source) {
+        // For each chunk of data
+        for await (const msg of source) {
+          streamReceivedCb(msg.toString().replace('\n',''))
+        }
+      }
+    )
+
   })
 
   // Start listening
