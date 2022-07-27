@@ -12,18 +12,11 @@ function App() {
 
   const [libp2p, setLibp2p] = useState({})
   const [whichNode, setWhichNode] = useState("")
-  const [stream, setStream] = useState(undefined)
   const [input, setInput] = useState("")
-  const [streamItem, setStreamItem] = useState("")
   const [streamItems, setStreamItems] = useState([])
 
   const onStreamItemReceived = (s) => {
-    console.log("onStreamItemReceived: ", s)
-    setStreamItem(streamItem + s)
-  }
-
-  const onStreamClosed = () => {
-    setStreamItems(...streamItems, streamItem)
+    setStreamItems(oldArray => [...oldArray, s])
   }
 
   return (
@@ -49,28 +42,36 @@ function App() {
         {whichNode}
         <br/>
         {whichNode === "Dialer" && (
-          <button onClick={async () => {
-            const stream = await createStream(libp2p)
-            console.log("stream: ", stream)
-            setStream(stream)
-          }}>{"CREATE STREAM DIALER -> LISTENER"}</button>
-        )}
-        {stream && (
           <div>
             <input onChange={e => setInput(e.target.value)}/>
-            <button onClick={() => {
+            <button onClick={async () => {
+
+              const stream = await createStream(libp2p)
+              // console.log("stream: ", stream)
+
               console.log("send to stream.")
-              pipe(
+              await pipe(
                 input, 
                 (source) => map(source, (string) => uint8ArrayFromString(string)),
                 lp.encode(),
                 stream.sink
               )
-              // stream.close()
+              console.log("sent")
+              stream.close()
             }}>Send</button>
           </div>
         )}
-        {streamItems}
+        {(streamItems && streamItems.length > 0) && (
+          <div>
+            <br />
+            <h3>Messages Received:</h3>
+            <ul>
+              {streamItems.map((item, i) => {
+                return <li key={i}>{item}</li>
+              })}
+            </ul>
+          </div>
+        )}
       </header>
     </div>
   );

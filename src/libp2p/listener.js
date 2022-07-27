@@ -9,7 +9,7 @@ import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
 import * as lp from 'it-length-prefixed'
 import map from 'it-map'
 
-export async function createListener (streamReceivedCb, streamEndedCb) {
+export async function createListener (streamChunkReceivedCb) {
   // Create a new libp2p node with the given multi-address
   const idListener = await createFromJSON(peerIdListenerJson)
   const nodeListener = await setupLibp2p(idListener)
@@ -39,12 +39,13 @@ export async function createListener (streamReceivedCb, streamEndedCb) {
       // Sink function
       async function (source) {
         // For each chunk of data
+        let message = ""
         for await (const msg of source) {
-          streamReceivedCb(msg.toString().replace('\n',''))
+          message = message + (msg.toString().replace('\n',''))
         }
+        streamChunkReceivedCb(message)
       }
     )
-
   })
 
   // Start listening
